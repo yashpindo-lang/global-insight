@@ -1,0 +1,43 @@
+import { defaultBibliography, defaultFolders } from '../data/mockData';
+
+export default function WorkspacePage() {
+  return (
+    <main>
+      <section className="panel-grid workspace-grid">
+        <div className="panel workspace-panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Research workspace</span>
+              <h2>Saved research folders</h2>
+            </div>
+          </div>
+
+          <div className="folder-list">
+            {defaultFolders.map((folder) => (
+              <div key={folder} className="folder-item">
+                <span>{folder}</span>
+                <button className="soft-button">Open</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="panel workspace-panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Bibliography</span>
+              <h2>Generator</h2>
+            </div>
+            <button className="soft-button">Export report</button>
+          </div>
+
+          <ul className="bibliography-list">
+            {defaultBibliography.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    </main>
+  );
+}

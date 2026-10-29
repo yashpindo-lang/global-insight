@@ -1,0 +1,99 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, message: 'GLOBAL INSIGHT API is running.' });
+});
+
+app.post('/api/research', async (req, res) => {
+  const { topic, sourceType } = req.body || {};
+
+  if (!topic || !topic.trim()) {
+    return res.status(400).json({
+      error: 'A research topic is required.',
+      results: [],
+      verificationStatus: 'not_verified'
+    });
+  }
+
+  const query = topic.trim();
+
+  try {
+    const provider = process.env.SEARCH_PROVIDER || 'demo';
+
+    if (provider === 'demo') {
+      return res.json({
+        query,
+        provider: 'demo',
+        verificationStatus: 'demo_only',
+        note: 'No live search provider is configured. Results are illustrative metadata only and should be independently verified before use in a final submission.',
+        results: [
+          {
+            title: `${query} – public policy and institutional literature`,
+            publisher: 'UN / institutional archives',
+            publicationDate: 'Current reporting',
+            sourceType: sourceType || 'Policy source',
+            summary: 'Institutional material for concept framing and topic definition. Use direct institutional documentation to verify any fact or legal claim.',
+            url: 'https://www.un.org/en/',
+            credibility: 'Medium',
+            relevance: 'High',
+            verification: 'requires_independent_check'
+          },
+          {
+            title: `${query} – peer-reviewed analysis`,
+            publisher: 'Academic journals',
+            publicationDate: 'Peer-reviewed',
+            sourceType: 'Academic journal',
+            summary: 'Peer-reviewed sources can help identify research questions and scholarly debate. Always check exact claims against the original article.',
+            url: 'https://scholar.google.com/',
+            credibility: 'High',
+            relevance: 'High',
+            verification: 'requires_independent_check'
+          }
+        ]
+      });
+    }
+
+    const providerUrl = `${process.env.SEARCH_PROVIDER_URL}?q=${encodeURIComponent(query)}`;
+    const response = await fetch(providerUrl, {
+      headers: {
+        Accept: 'application/json',
+        ...(process.env.SEARCH_API_KEY ? { Authorization: `Bearer ${process.env.SEARCH_API_KEY}` } : {})
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Provider request failed');
+    }
+
+    const payload = await response.json();
+
+    return res.json({
+      query,
+      provider,
+      verificationStatus: 'live_search',
+      note: 'Live search results are returned only when a configured provider is available. Check the listed sources before using findings in a final argument.',
+      results: Array.isArray(payload.results) ? payload.results : []
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: 'Unable to fetch live results at this time.',
+      results: [],
+      verificationStatus: 'not_verified',
+      note: 'A live search could not be completed. The platform will not invent sources or citations.'
+    });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`GLOBAL INSIGHT API running on http://localhost:${PORT}`);
+});
